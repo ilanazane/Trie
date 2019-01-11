@@ -1,0 +1,229 @@
+package trie;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+
+/**
+ * This class implements a Trie. 
+ * 
+ * @author Sesh Venugopal
+ *
+ */
+public class Trie {
+	
+	// prevent instantiation
+	private Trie() { }
+	
+	/**
+	 * Builds a trie by inserting all words in the input array, one at a time,
+	 * in sequence FROM FIRST TO LAST. (The sequence is IMPORTANT!)
+	 * The words in the input array are all lower case.
+	 * 
+	 * @param allWords Input array of words (lowercase) to be inserted.
+	 * @return Root of trie with all words inserted from the input array
+	 */
+	
+	
+	//find the common prefix between each string 
+		private static int commonpre(String a, String b) {
+			int counter=0;
+			while(counter<a.length()&&counter<b.length()
+					&&a.charAt(counter)==b.charAt(counter)){
+				counter++;
+			}
+			
+			
+			return (counter-1);		
+	}
+		
+		
+		
+		
+	
+	public static TrieNode buildTrie(String[] allWords) {
+		/** COMPLETE THIS METHOD **/
+		
+		TrieNode root = new TrieNode(null, null, null);
+		if(allWords.length == 0)
+			return root;
+		
+		//Since the array is not empty, initialize first child
+		root.firstChild = new TrieNode(new Indexes(0, 
+									  			 (short)(0), 
+									  			 (short)(allWords[0].length() - 1)), null, null);
+		
+		//Initialize pointer and lastSeen nodes
+		TrieNode pointer = root.firstChild, previous = root.firstChild;
+		int common = -1, startIndex = -1, endIndex = -1, wordIndex = -1;
+		
+		//Traverse through all words in array starting from second one and insert them
+		for(int indexOf = 1; indexOf < allWords.length; indexOf++) {
+			String word = allWords[indexOf];
+			
+			//end if pointer becomes null 
+			while(pointer != null) {
+				startIndex = pointer.substr.startIndex;
+				endIndex = pointer.substr.endIndex;
+				wordIndex = pointer.substr.wordIndex;
+				
+				//Need to check whether startIndex < word.length()
+				if(startIndex > word.length()) {
+					previous = pointer;
+					pointer = pointer.sibling;
+					continue;
+				}
+				
+				common = commonpre(allWords[wordIndex].substring(startIndex, endIndex+1), 
+						
+						//Find index where they are similar until
+						word.substring(startIndex)); 
+				
+				if(common != -1)
+					common += startIndex;
+				
+				//there is no match 
+				if(common == -1) { 
+					previous = pointer;
+					pointer = pointer.sibling;
+				}
+				else {
+					//complete match 
+					if(common == endIndex) { 
+						previous = pointer;
+						pointer = pointer.firstChild;
+					}
+					//match is not complete 
+					else if (common < endIndex){ 
+						previous = pointer;
+						break;
+					}
+				}
+			}
+			
+			//match not found 
+			if(pointer == null) {
+				Indexes indicies = new Indexes(indexOf, (short)startIndex, (short)(word.length()-1));
+				previous.sibling = new TrieNode(indicies, null, null);
+			} else {
+				
+				
+				//split up the current node 
+				Indexes currIndexes = previous.substr; //Get the current indexes
+				TrieNode currFirstChild = previous.firstChild; //Save a reference to first child so we don't lose everything under it
+				
+				//update the parent node with the index of similarity in the new word node 
+				Indexes currWordNewIndexes = new Indexes(currIndexes.wordIndex, (short)(common+1), currIndexes.endIndex);
+				currIndexes.endIndex = (short)common; 
+				
+				
+				//shift everything down and to the right of the parent node 
+				previous.firstChild = new TrieNode(currWordNewIndexes, null, null);
+				previous.firstChild.firstChild = currFirstChild;
+				previous.firstChild.sibling = new TrieNode(new Indexes((short)indexOf, (short)(common+1), (short)(word.length()-1)), 
+						null, null);
+			}
+			
+			//at the very end reset the pointer and the previous references 
+			previous = pointer = root.firstChild;
+			common = wordIndex= endIndex=startIndex= -1;
+		}
+		
+		return root;
+	}
+	
+	
+	
+	
+	/**
+	 * Given a trie, returns the "completion list" for a prefix, i.e. all the leaf nodes in the 
+	 * trie whose words start with this prefix. 
+	 * For instance, if the trie had the words "bear", "bull", "stock", and "bell",
+	 * the completion list for prefix "b" would be the leaf nodes that hold "bear", "bull", and "bell"; 
+	 * for prefix "be", the completion would be the leaf nodes that hold "bear" and "bell", 
+	 * and for prefix "bell", completion would be the leaf node that holds "bell". 
+	 * (The last example shows that an input prefix can be an entire word.) 
+	 * The order of returned leaf nodes DOES NOT MATTER. So, for prefix "be",
+	 * the returned list of leaf nodes can be either hold [bear,bell] or [bell,bear].
+	 *
+	 * @param root Root of Trie that stores all words to search on for completion lists
+	 * @param allWords Array of words that have been inserted into the trie
+	 * @param prefix Prefix to be completed with words in trie
+	 * @return List of all leaf nodes in trie that hold words that start with the prefix, 
+	 * 			order of leaf nodes does not matter.
+	 *         If there is no word in the tree that has this prefix, null is returned.
+	 */
+	public static ArrayList<TrieNode> completionList(TrieNode root,
+										String[] allWords, String prefix) {
+		if(root == null) return null;
+		
+		ArrayList<TrieNode> commonpre = new ArrayList<>();
+		TrieNode pointer = root;
+		
+		while(pointer != null) {
+			
+			
+			//find the substring at the node or the root node possibly 
+			
+			if(pointer.substr == null) 
+				pointer = pointer.firstChild;
+			
+			String s = allWords[pointer.substr.wordIndex];
+			String a = s.substring(0, pointer.substr.endIndex+1);
+			if(s.startsWith(prefix) || prefix.startsWith(a)) {
+				
+				//not a full word so move to children 
+				if(pointer.firstChild != null) { 
+					commonpre.addAll(completionList(pointer.firstChild, allWords, prefix));
+					pointer = pointer.sibling;
+				
+				//else it is a string node with a full word 
+				} else { 					
+					commonpre.add(pointer);
+					pointer = pointer.sibling;
+				}
+			} else {
+				pointer = pointer.sibling;
+			}
+		}
+		
+		return commonpre;
+	}
+	
+	public static void print(TrieNode root, String[] allWords) {
+		System.out.println("\nTRIE\n");
+		print(root, 1, allWords);
+	}
+	
+	private static void print(TrieNode root, int indent, String[] words) {
+		if (root == null) {
+			return;
+		}
+		for (int i=0; i < indent-1; i++) {
+			System.out.print("    ");
+		}
+		
+		if (root.substr != null) {
+			String pre = words[root.substr.wordIndex]
+							.substring(0, root.substr.endIndex+1);
+			System.out.println("      " + pre);
+		}
+		
+		for (int i=0; i < indent-1; i++) {
+			System.out.print("    ");
+		}
+		System.out.print(" ---");
+		if (root.substr == null) {
+			System.out.println("root");
+		} else {
+			System.out.println(root.substr);
+		}
+		
+		for (TrieNode ptr=root.firstChild; ptr != null; ptr=ptr.sibling) {
+			for (int i=0; i < indent-1; i++) {
+				System.out.print("    ");
+			}
+			System.out.println("     |");
+			print(ptr, indent+1, words);
+		}
+	}
+ }
